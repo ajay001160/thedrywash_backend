@@ -27,7 +27,7 @@ const orderSchema = new mongoose.Schema(
       flatNo: { type: String, trim: true, required: true },
       floor: { type: String, trim: true },
       sector: { type: String, trim: true, required: true },
-      locality: { type: String, trim: true },
+      locality_society: { type: String, trim: true },
     },
     items: {
       type: Array,
