@@ -1,12 +1,12 @@
 import express from "express";
 import dotenv from "dotenv";
-dotenv.config();
+dotenv.config();                                                 
 import fileUpload from "express-fileupload"
 import userRoute from "./route/user.js"
 import subAdminRoute from "./route/subadmin.js";
 import dbconnection from "./config/dbconnection.js";
 import logger from "./utility/logger.js";
-const app=express();
+const app=express();                
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(fileUpload());
