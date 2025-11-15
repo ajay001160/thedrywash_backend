@@ -24,9 +24,9 @@ const orderSchema = new mongoose.Schema(
       required: true,
     },
     address: {
-      flatNo: { type: String, trim: true },
+      flatNo: { type: String, trim: true, required: true },
       floor: { type: String, trim: true },
-      sector: { type: String, trim: true },
+      sector: { type: String, trim: true, required: true },
       locality: { type: String, trim: true },
     },
     items: {
@@ -38,10 +38,10 @@ const orderSchema = new mongoose.Schema(
       enum: ["pending", "delivered", "cancelled"],
       default: "pending",
     },
-    totalPrice:{
-      type:String,
-      required:true,
-      trim:true
+    totalPrice: {
+      type: String,
+      required: true,
+      trim: true,
     },
     orderDate: {
       type: Date,
