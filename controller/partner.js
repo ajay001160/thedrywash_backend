@@ -3,10 +3,10 @@ import order from "../model/order.js";
 import logger from "../utility/logger.js";
 import bcrypt from "bcrypt";
 import jwt from "../utility/jwt.js";
+const file = "partner.js";
 
 const login = async (req, res) => {
   const handler = "login";
-  const file = "partner.js";
   try {
     logger.info(`[${file}][${handler}] handler called`);
     const number = req.body?.number;
@@ -56,7 +56,10 @@ const pickUp = async (req, res) => {
       });
     }
     const pickUpOrders = await order
-      .find({ status: "pending", "address.sector":sector },{status:1,totatlPrice:1,address:1,orderDate:1})
+      .find(
+        { status: "pending", "address.sector": sector },
+        { status: 1, totatlPrice: 1, address: 1, orderDate: 1 }
+      )
       .sort({ createdAt: 1 });
     if (pickUpOrders.length <= 0) {
       logger.warn("No oder for pickup");
@@ -70,12 +73,12 @@ const pickUp = async (req, res) => {
       status: true,
       orderList: pickUpOrders,
     });
-  } catch(error){
-    logger.error(`[partner.js][${handler}]error--->${error}`)
-    return	res.status(500).json({
-			status:false,
-			msg:"Internal server	error"
-		})
+  } catch (error) {
+    logger.error(`[partner.js][${handler}]error--->${error}`);
+    return res.status(500).json({
+      status: false,
+      msg: "Internal server	error",
+    });
   }
 };
 
