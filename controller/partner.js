@@ -43,5 +43,40 @@ const login = async (req, res) => {
   }
 };
 
+const pickUp = async (req, res) => {
+  const handler = "pickup";
+  try {
+    logger.info(`[partner][${handler}] handler called`);
+    const { partnerId } = req.partner || {};
+    if (!partnerId) {
+      logger.warn(`Argument missing inside the token`);
+      return res.status(401).json({
+        status: false,
+        msg: "Argument mising inside the token",
+      });
+    }
+    const pickUpOrders = await order
+      .find({ status: "pending", "address.sector":sector },{status:1,totatlPrice:1,address:1,orderDate:1})
+      .sort({ createdAt: 1 });
+    if (pickUpOrders.length <= 0) {
+      logger.warn("No oder for pickup");
+      return res.status(404).json({
+        status: true,
+        msg: "No order to pick up",
+      });
+    }
+    logger.info(`Order Fetch Successfully`);
+    return res.status(200).json({
+      status: true,
+      orderList: pickUpOrders,
+    });
+  } catch(error){
+    logger.error(`[partner.js][${handler}]error--->${error}`)
+    return	res.status(500).json({
+			status:false,
+			msg:"Internal server	error"
+		})
+  }
+};
 
-export default { login }
+export default { login };

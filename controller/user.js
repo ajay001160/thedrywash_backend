@@ -18,19 +18,36 @@ dotenv.config();
 const signup = async (req, res) => {
   const C = "signup";
   try {
-    const { name, email, address, role } = req.body || {};
-    const number = req.token?.number || null;
-    const { flateNo, floor, sector, locality } = address;
     logger.error(`[user.js][${C}] Function Called`);
-    console.log(name, email, number, role, flateNo, sector, locality);
+    let {
+      name,
+      gender,
+      city,
+      society,
+      floor,
+      flat,
+      sector,
+      email,
+      alternateNumber,
+    } = req.body || {};
+    alternateNumber = alternateNumber?.toString().trim() || "";
+    const number = req.token?.number || null;
+    flat = flat?.toString();
+    floor = floor?.toString();
+    logger.error(
+      `[name]--->${name}[gender]--->${gender}[email]--->${email} [city]--->${city} [sector]--->${sector}[society]--->${society}[floor]--->${floor} [flat]--->${flat}[alternateNumber]--->${alternateNumber}`
+    );
+
     if (
       !name ||
       !email ||
       !number ||
-      !role ||
-      !flateNo ||
+      !alternateNumber ||
+      !flat ||
       !sector ||
-      !locality
+      !floor ||
+      !city ||
+      !society
     ) {
       logger.error(" Some Argument Missing");
       return res.status(400).json({
@@ -55,14 +72,16 @@ const signup = async (req, res) => {
     }
     const userObj = new user({
       name,
+      gender,
+      alternateNumber,
       number,
       email,
-      role,
       address: {
-        flateNo: flateNo,
+        flateNo: flat,
         floor: floor,
         sector: sector,
-        locality: locality,
+        society_locality: society,
+        city: city,
       },
     });
     const saveUser = await userObj.save();
@@ -93,13 +112,14 @@ const sendOtp = async (req, res) => {
     logger.info(`[user.js] [${C}] Handler Called`);
     // let { number } = req.body || {};
     let email;
-    const number = req.body?.number;
+    let number = req.body?.number;
+    number = number?.toString().trim();
     if (number === "9525590691") {
       email = "hamidnawazktr7@gmail.com";
     } else {
       email = "piyushhyadavv21@gmail.com";
     }
-
+    logger.info(`[number]--->[${number}]`);
     if (!number) {
       logger.info("Please give complete argument");
       return res.status(400).json({
@@ -107,24 +127,33 @@ const sendOtp = async (req, res) => {
         msg: "Please give complete argument",
       });
     }
+    if (number.length !== 10) {
+      logger.info(`ncomplete number ${number}`);
+      return res.status(400).json({
+        status: false,
+        msg: "Incomplete number ",
+      });
+    }
     //  const email="piyushhyadavv21@gmail.com";
-    const otp = Math.floor(Math.random() * 1000000).toString();
-    await transports.sendMail({
-      from: `"The Dry Wash" <${process.env.USER_EMAIL}>`,
-      to: email,
-      subject: "Your The Dry Wash App OTP",
-      text: `Your OTP is ${otp}. Valid for 5 minutes.`, // plain text fallback
-      html: `<p>Hello,</p>
-         <p>Your OTP for Laundry App login is:</p>
-         <h2 style="color:#007BFF;">${otp}</h2>
-         <p>Please use this code within 5 minutes. If you did not request this, ignore this email.</p>
-         <p>Thank you,<br/> The Dry Wash Laundry App Team</p>`,
-    });
+    const otp = "111111";
+    //--->
+    // const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    //--->
+    // await transports.sendMail({
+    //   from: `"The Dry Wash" <${process.env.USER_EMAIL}>`,
+    //   to: email,
+    //   subject: "Your The Dry Wash App OTP",
+    //   text: `Your OTP is ${otp}. Valid for 5 minutes.`, // plain text fallback
+    //   html: `<p>Hello,</p>
+    //      <p>Your OTP for Laundry App login is:</p>
+    //      <h2 style="color:#007BFF;">${otp}</h2>
+    //      <p>Please use this code within 5 minutes. If you did not request this, ignore this email.</p>
+    //      <p>Thank you,<br/> The Dry Wash Laundry App Team</p>`,
+    // });
 
     // const hashOtp = otp;
     const hashOtp = await bcrypt.hash(otp, 10);
     const saveTempOtp = await tempOtp.create({ number: number, otp: hashOtp });
-    await loginTrack.create({ number: number });
     logger.info("OTP sent successfully to the number");
     return res.status(200).json({
       status: true,
@@ -143,10 +172,15 @@ const otpVerify = async (req, res) => {
   const C = "otpVerify";
   try {
     logger.info(`[user.js] [${C}] Handler Called`);
-    const { otp, number } = req.body || {};
+    let { otp, number } = req.body || {};
+    otp = otp?.toString().trim() || "";
+    number = number?.toString().trim() || "";
     let userRegiestered = false;
-    if (!otp || !number) {
-      logger.error("Please give give complete argument");
+    logger.info(`[number]--->[${number}][otp]--->[${otp}]`)
+    if (!otp || !number || number.length()!==10 || otp.length()!==6) {
+      logger.error(
+        `[number]--->[${number}][otp]--->[${otp}]Please give give complete argument`
+      );
       return res.status(400).json({
         status: false,
         msg: "Please give complete argument",
@@ -169,6 +203,7 @@ const otpVerify = async (req, res) => {
             userRegiestered: userRegiestered,
           });
         } else {
+          await loginTrack.create({ number: number });
           const notExist = { role: "pre-auth", number: number };
           const token = jwtToken(notExist);
           logger.info("OTP verified successfully but usernot exist");
@@ -641,8 +676,8 @@ const cancelOrder = async (req, res) => {
     const newStatus = await order.findOneAndUpdate(
       { orderId: orderId },
       { status: "cancelled" },
-     { new: true, projection: { status: 1 } }
-    );//it take only three argiment--->
+      { new: true, projection: { status: 1 } }
+    ); //it take only three argiment--->
     logger.info(newStatus);
     logger.info(`[${newStatus.status}]--->Order Cancelled Sucessfully`);
     return res.status(200).json({
@@ -671,26 +706,36 @@ const listTotalOrders = async (req, res) => {
         msg: "argument missing",
       });
     }
-    const ordersList=await order.find({userId:userId,status:status}).sort({createdAt:-1});
-    if(ordersList.length==0){
-      logger.warn(`no order for this status [${status}]}`)
+    const ordersList = await order
+      .find({ userId: userId, status: status })
+      .sort({ createdAt: -1 });
+    if (ordersList.length == 0) {
+      logger.warn(`no order for this status [${status}]}`);
       return res.status(404).json({
-        status:false,
-        msg:"No order Available"
-      })
+        status: false,
+        msg: "No order Available",
+      });
     }
-    let newList=ordersList.map((i)=>{ return {id:i._id,orderid:i.orderId,orderDate:i.orderDate,updatedAt:i.updatedAt,status:i.status}})
+    let newList = ordersList.map((i) => {
+      return {
+        id: i._id,
+        orderid: i.orderId,
+        orderDate: i.orderDate,
+        updatedAt: i.updatedAt,
+        status: i.status,
+      };
+    });
     logger.info(`data arrange successfully`);
     return res.status(200).json({
-      status:true,
-      ordersList:newList
-    })
+      status: true,
+      ordersList: newList,
+    });
   } catch (error) {
-    logger.error(`[user.js][${handler} error--->${error}]`)
+    logger.error(`[user.js][${handler} error--->${error}]`);
     return res.status(500).json({
-      status:false,
-      msg:"internal server error"
-    })
+      status: false,
+      msg: "internal server error",
+    });
   }
 };
 
@@ -705,5 +750,5 @@ export default {
   confirmOrder,
   orderInfo,
   cancelOrder,
-  listTotalOrders
+  listTotalOrders,
 };

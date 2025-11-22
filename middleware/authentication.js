@@ -8,7 +8,7 @@ const auth=async(req,res,next)=>{
     const userToken=req.header("Authorization") || null;
     logger.info("auth.js handler called")
     if(!userToken || !userToken.startsWith("Bearer ")){
-      logger.warm("token mising")
+      logger.warn("token mising")
       return res.status(401).json({
         status:false,
         msg:"token missing"
