@@ -115,12 +115,12 @@ const orderInfo=async(req,res)=>{
     console.log(` i--->${i.serviceId}`)
     if(matchService){
       console.log("item match");
-      matchService.items.push({itemName:i.item,quantity:i.quantity})
+      matchService.items.push({itemId:i.item,quantity:i.quantity})
     
     }
     else{
       console.log("item  not match");
-      let temp={serviceName:i.serviceId,items:[{itemName:i.itemId,quantity:i.quantity}],totatlPrice:i.totatlPrice};
+      let temp={serviceId:i.serviceId,items:[{itemId:i.itemId,quantity:i.quantity}],totatlPrice:i.totatlPrice};
       array.push(temp);
     }
     }
