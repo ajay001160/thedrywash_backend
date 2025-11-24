@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+// import service from "./service";
 
 const orderSchema = new mongoose.Schema(
   {
@@ -29,10 +30,22 @@ const orderSchema = new mongoose.Schema(
       sector: { type: String, trim: true, required: true },
       locality_society: { type: String, trim: true },
     },
-    items: {
-      type: Array,
-      required: true,
-    },
+    items: [
+          {
+            serviceId: {
+              type: mongoose.Schema.Types.ObjectId,
+              ref: "service",
+            },
+            itemId: {
+              type: mongoose.Schema.Types.ObjectId,
+              ref: "serviceitem",
+            },
+            quantity: {
+              type: String,
+              require: true,
+            }
+          }
+        ],
     status: {
       type: String,
       enum: ["pending", "delivered", "cancelled"],
