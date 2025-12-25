@@ -110,7 +110,7 @@ const orderInfo=async(req,res)=>{
     }
     let array=[];
     for(const i of info.items){
-    const matchService=array.find((y)=>{ y.serviceId===i.serviceId?.toString();  console.log(` y--->${y.serviceId}`)})
+    const matchService=array.find((y)=>{ y.serviceId.toString()===i.serviceId?.toString();  console.log(` y--->${y.serviceId}`)})
    
     console.log(` i--->${i.serviceId}`)
     if(matchService){

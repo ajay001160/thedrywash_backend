@@ -177,7 +177,7 @@ const otpVerify = async (req, res) => {
     number = number?.toString().trim() || "";
     let userRegiestered = false;
     logger.info(`[number]--->[${number}][otp]--->[${otp}]`)
-    if (!otp || !number || number.length()!==10 || otp.length()!==6) {
+    if (!otp || !number || number.length !==10 || otp.length !==6) {
       logger.error(
         `[number]--->[${number}][otp]--->[${otp}]Please give give complete argument`
       );

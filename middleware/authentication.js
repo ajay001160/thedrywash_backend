@@ -2,11 +2,13 @@ import jwt from "jsonwebtoken";
 import dotenv from "dotenv";
 import logger from "../utility/logger.js";
 dotenv.config();
+const file="authentication.js"
 
 const auth=async(req,res,next)=>{
+  const middleware="auth"
   try{
     const userToken=req.header("Authorization") || null;
-    logger.info("auth.js handler called")
+    logger.info(`[${file}][${middleware}] handler called`)
     if(!userToken || !userToken.startsWith("Bearer ")){
       logger.warn("token mising")
       return res.status(401).json({
@@ -20,7 +22,7 @@ const auth=async(req,res,next)=>{
     next();
   }
   catch(error){
-     logger.error(`error---> ${error}`)
+     logger.error(`[${file}][${middleware}]error---> ${error}`)
     if(error.name==="TokenExpiredError"){
       return res.status(401).json({
         status:false,
