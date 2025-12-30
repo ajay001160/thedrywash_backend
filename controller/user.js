@@ -12,9 +12,12 @@ import transports from "../config/mail.js";
 import checkEmailFormat from "../utility/checkEmailFormat.js";
 import dotenv from "dotenv";
 import serviceItem from "../model/serviceItem.js";
+import twilio from "twilio/lib/rest/Twilio.js";
+import mongoose from "mongoose";
+import { json, response } from "express";
 
 dotenv.config();
-
+const file = "user.js";
 const signup = async (req, res) => {
   const C = "signup";
   try {
@@ -110,51 +113,40 @@ const sendOtp = async (req, res) => {
   const C = "sentOtp";
   try {
     logger.info(`[user.js] [${C}] Handler Called`);
-    // let { number } = req.body || {};
-    let email;
     let number = req.body?.number;
     number = number?.toString().trim();
-    if (number === "9525590691") {
-      email = "hamidnawazktr7@gmail.com";
-    } else {
-      email = "piyushhyadavv21@gmail.com";
-    }
     logger.info(`[number]--->[${number}]`);
     if (!number) {
-      logger.info("Please give complete argument");
+      logger.warn("Please give complete argument");
       return res.status(400).json({
         status: false,
         msg: "Please give complete argument",
       });
     }
     if (number.length !== 10) {
-      logger.info(`ncomplete number ${number}`);
+      logger.warn(`incomplete number +91${number}`);
       return res.status(400).json({
         status: false,
         msg: "Incomplete number ",
       });
     }
-    //  const email="piyushhyadavv21@gmail.com";
-    const otp = "111111";
-    //--->
-    // const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    //--->
-    // await transports.sendMail({
-    //   from: `"The Dry Wash" <${process.env.USER_EMAIL}>`,
-    //   to: email,
-    //   subject: "Your The Dry Wash App OTP",
-    //   text: `Your OTP is ${otp}. Valid for 5 minutes.`, // plain text fallback
-    //   html: `<p>Hello,</p>
-    //      <p>Your OTP for Laundry App login is:</p>
-    //      <h2 style="color:#007BFF;">${otp}</h2>
-    //      <p>Please use this code within 5 minutes. If you did not request this, ignore this email.</p>
-    //      <p>Thank you,<br/> The Dry Wash Laundry App Team</p>`,
-    // });
 
-    // const hashOtp = otp;
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const client = new twilio(
+      process.env.TWILIO_ACCOUNT_SID,
+      process.env.TWILIO_AUTH_TOKEN
+    );
+    const sms = await client.messages.create({
+      body: ` Your TheDryWash verification code is ${otp}. Please do not share this code with anyone.`,
+      from: process.env.TWILIO_PHONE_NUMBER,
+      to: `+91${number}`,
+    });
     const hashOtp = await bcrypt.hash(otp, 10);
-    const saveTempOtp = await tempOtp.create({ number: number, otp: hashOtp });
-    logger.info("OTP sent successfully to the number");
+    const saveTempOtp = await tempOtp.create({
+      number: number,
+      otp: hashOtp,
+    });
+    logger.info(`OTP sent successfully to the number +91${number}`);
     return res.status(200).json({
       status: true,
       msg: `OTP sent successfully to +91-${number}`,
@@ -176,8 +168,8 @@ const otpVerify = async (req, res) => {
     otp = otp?.toString().trim() || "";
     number = number?.toString().trim() || "";
     let userRegiestered = false;
-    logger.info(`[number]--->[${number}][otp]--->[${otp}]`)
-    if (!otp || !number || number.length !==10 || otp.length !==6) {
+    logger.info(`[number]--->[${number}][otp]--->[${otp}]`);
+    if (!otp || !number || number.length !== 10 || otp.length !== 6) {
       logger.error(
         `[number]--->[${number}][otp]--->[${otp}]Please give give complete argument`
       );
@@ -240,26 +232,39 @@ const otpVerify = async (req, res) => {
 const addToCart = async (req, res) => {
   const handler = "addToCart";
   try {
-    logger.info(`[user.js], [${handler}] handler called`);
-
-    const { itemId, serviceId } = req.body || {};
-    let quantity = req.body.quantity;
-    // const userId = req.user.userId;  assume userId comes from auth middleware
-    const userId = req.body.userId;
-
-    if (!serviceId || !itemId || !quantity) {
-      logger.warn(`[${handler}] [user.js] Please provide complete arguments`);
+    const itemId = req.params?.itemId?.trim() || "";
+    const serviceId = req.params?.serviceId?.trim() || "";
+    let quantity = req.body?.quantity?.trim() || "";
+    const userId = req.user?.userId || req.body?.userId || "";
+    logger.info(
+      `[${file}][${handler}] [HANDLER_CALLED] | userId = ${userId}, serviceId= ${serviceId}, itemId= ${itemId}, quantity =${quantity}`
+    );
+    if (!serviceId || !itemId || !quantity || !userId) {
+      logger.warn(
+        `[${file}][${handler}] [ARGUMENT_MISSING] | userId = ${userId},serviceId=${serviceId},itemId= ${itemId},quantity =${quantity}`
+      );
       return res.status(400).json({
         status: false,
         msg: "Please provide complete arguments",
       });
     }
-
+    if (
+      !mongoose.Types.ObjectId.isValid(userId) ||
+      !mongoose.Types.ObjectId.isValid(serviceId) ||
+      !mongoose.Types.ObjectId.isValid(itemId)
+    ) {
+      logger.info(
+        `[${file}][${handler}] [INVALID_ARGUMET_FORMAT] | userId = ${userId}, serviceId= ${serviceId}, itemId= ${itemId}, quantity =${quantity}`
+      );
+      return res.status(400).json({
+        status: false,
+        msg: "Invalid argument format",
+      });
+    }
     quantity = parseInt(quantity);
-    logger.info(`no of quantaty--->${quantity}`);
-    if (quantity === 0 || quantity < -1) {
+    if (quantity === 0 || quantity < -1 || Number.isNaN(quantity) || quantity > 1) {
       logger.warn(
-        `[${handler}] [user.js] Quantity must be a positive number or -1 allow at a time`
+        `[${file}][${handler}] [INVALID_QUANTITY] | quantity =${quantity}`
       );
       return res.status(400).json({
         status: false,
@@ -268,11 +273,15 @@ const addToCart = async (req, res) => {
     }
 
     const itemInfo = await serviceItem.findById(itemId);
-    if (!itemInfo) {
-      logger.warn(`[${handler}] [user.js] Item not found`);
+    const userInfo = await user.findById(userId);
+    const serviceInfo = await service.findById(serviceId);
+    if (!itemInfo || !userInfo || !serviceInfo) {
+      logger.warn(
+        `[${file}][${handler}] [NO_RECORD_FOUND] | userId= ${userId} ,itemId= ${itemId} , serviceId =${serviceId}`
+      );
       return res.status(404).json({
         status: false,
-        msg: "Item not found",
+        msg: "No record found",
       });
     }
     let newCart;
@@ -287,81 +296,151 @@ const addToCart = async (req, res) => {
       if (matchedItem) {
         // Update quantity
         let newQuantity = parseInt(matchedItem.quantity) + quantity;
+        let itemTotalPrice =
+          parseInt(matchedItem.price) +(
+          parseInt(quantity) * parseInt(itemInfo.price));
+          console.log(itemTotalPrice);
         let totalPrice =
-          parseInt(userCart.totalPrice) + parseInt(quantity * itemInfo.price);
+          parseInt(userCart.totalPrice) +
+          parseInt(quantity) * parseInt(itemInfo.price);
         totalPrice = totalPrice.toString();
         newQuantity = newQuantity.toString();
+        itemTotalPrice = itemTotalPrice.toString();
         if (newQuantity <= 0) {
           // Remove the item if quantity becomes 0
+          logger.info(
+            `[${file}][${handler}] [NEW_QUANTITY = 0] [REMOVE_CART_ITEM] | newQuantity = ${newQuantity}, UpdatedTotalPrice = ${totalPrice}`
+          );
           newCart = await cart.findOneAndUpdate(
             { userId, "items.itemId": itemId, "items.serviceId": serviceId },
             { $pull: { items: { serviceId, itemId } }, $set: { totalPrice } },
             { new: true }
           );
+          logger.info(
+            `[${file}][${handler}] [CART_UPDATED_SUCCESSFULLY] | newQuantity = ${newQuantity}, UpdatedTotalPrice = ${totalPrice}`
+          );
+          return res.status(200).json({
+            status: true,
+            newQuantity: quantity,
+            itemTotalPrice: itemTotalPrice,
+            noOfItemInCart: newCart.items.length,
+            cartTotalPrice: newCart.totalPrice,
+            msg: "Cart Updated Successfully",
+          });
         } else {
           // Update the quantity and total price
           logger.info(
-            `[totalPrice][${totalPrice}][newQuantity][${newQuantity}]user exist and item found updating it`
+            `[${file}][${handler}] [NEW_QUANTITY > 0] [INCREASE_ITEM_COUNT] | newQuantity = ${newQuantity}, UpdatedTotalPrice = ${totalPrice}`
           );
           newCart = await cart.findOneAndUpdate(
             { userId, "items.itemId": itemId, "items.serviceId": serviceId },
             {
-              $set: { "items.$.quantity": newQuantity, totalPrice: totalPrice },
+              $set: {
+                "items.$.quantity": newQuantity,
+                "items.$.price": itemTotalPrice,
+                totalPrice: totalPrice,
+              },
             },
             { new: true }
           );
+          logger.info(
+            `[${file}][${handler}] [CART_UPDATED_SUCCESSFULLY] | newQuantity = ${newQuantity}, UpdatedTotalPrice = ${totalPrice}`
+          );
+          return res.status(200).json({
+            status: true,
+            newQuantity: newQuantity,
+            itemTotalPrice: itemTotalPrice,
+            noOfItemInCart: newCart.items.length,
+            cartTotalPrice: newCart.totalPrice,
+            msg: "Cart Updated Successfully",
+          });
         }
       } else {
         // Item does not exist in cart, push new item
+        if (quantity <= 0) {
+          //item not exist in cart but user use quantaty -1
+          logger.warn(
+            `[${file}][${handler}] [ACTION_NOT_ALLOWED] | rule=quantity must positive if item not exist in cart | quantity = ${quantity}`
+          );
+          return res.status(400).json({
+            status: false,
+            msg: "Action not allowed",
+          });
+        }
+        // itemTotalPrice = itemInfo.price;
         let totalPrc =
-          parseInt(userCart.totalPrice) + parseInt(quantity * itemInfo.price);
+          parseInt(userCart.totalPrice) +
+          parseInt(quantity) * parseInt(itemInfo.price);
         totalPrc = totalPrc.toString();
-        logger.info("user exist but item not exist");
+        logger.info(
+          `[${file}][${handler}] [ITEM_NOT_EXIT] | msg=item not exist in cart | quantity = ${quantity}, ItemTotalPrice=${itemInfo.price}, UpdatedTotalPrice=${totalPrc}`
+        );
         newCart = await cart.findOneAndUpdate(
           { userId },
           {
             $push: {
-              items: { serviceId, itemId, quantity },
+              items: { serviceId, itemId, price: itemInfo.price, quantity },
             },
             $set: { totalPrice: totalPrc },
           },
           { new: true }
         );
-      }
-    } else {
-      logger.info("user not exist adding new in the cart model");
-      quantity = quantity.toString();
-      // Create a new cart for the user
-      newCart = await cart.create({
-        userId,
-        items: [{ serviceId: serviceId, itemId: itemId, quantity: quantity }],
-        totalPrice: quantity * itemInfo.price,
+      
+      logger.info(
+        `[${file}][${handler}] [CART_UPDATED_SUCCESSFULLY] | newQuantity = ${quantity}, UpdatedTotalPrice = ${totalPrc}`
+      );
+      return res.status(200).json({
+        status: true,
+        newQuantity: quantity,
+        itemTotalPrice: itemInfo.price,
+        noOfItemInCart: newCart.items.length,
+        cartTotalPrice: newCart.totalPrice,
+        msg: "Cart Updated Successfully",
       });
     }
-    //To find the quantity of the added item--->
-    // let itemQuantity;
-    // itemQuantity = await cart.findOne({
-    //   userId: userId,
-    //   "items.serviceId": serviceId,
-    //   "items.itemId": itemId,
-    // });
-    const matchItem = newCart.items.find(
-      (i) =>
-        i.serviceId.toString() === serviceId && i.itemId.toString() === itemId
-    );
-    if (matchItem) {
-      let UpdateQuantity = matchItem.quantity.toString();
     } else {
-      let UpdateQuantity = 0;
+      if (quantity <= 0) {
+        //item not exist in cart but user use quantaty -1
+        logger.warn(
+          `[${file}][${handler}] [ACTION_NOT_ALLOWED] | rule=quantity must positive if cart not exist for user | quantity = ${quantity}`
+        );
+        return res.status(400).json({
+          status: false,
+          msg: "Action not allowed",
+        });
+      }
+      quantity = quantity.toString();
+      // const nPrice = parseInt(itemInfo.price);
+      // Create a new cart for the user
+      logger.info(
+        `[${file}][${handler}] [CART_NOT_EXIST] | msg=Cart not exist for the user | userCart=${userCart}, quantity=${quantity}, itemsPrice=${parseInt(
+          itemInfo.price
+        )},cartTotalPrice=${parseInt(itemInfo.price)}`
+      );
+      newCart = await cart.create({
+        userId,
+        items: [
+          {
+            serviceId: serviceId,
+            itemId: itemId,
+            price: itemInfo.price,
+            quantity: quantity,
+          },
+        ],
+        totalPrice: quantity * itemInfo.price,
+      });
+      logger.info(
+        `[${file}][${handler}] [CART_UPDATED_SUCCESSFULLY] | newQuantity = ${quantity}, UpdatedTotalPrice = ${itemInfo.price}`
+      );
+      return res.status(200).json({
+        status: true,
+        newQuantity: quantity,
+        itemTotalPrice: itemInfo.price,
+        noOfItemInCart: newCart.items.length,
+        cartTotalPrice: newCart.totalPrice,
+        msg: "Cart Updated Successfully",
+      });
     }
-    logger.info(`${userId} --> Item saved to cart`);
-    return res.status(200).json({
-      status: true,
-      UpdatedQnt: UpdateQuantity,
-      noOfItem: newCart.length,
-
-      msg: "Item saved to cart",
-    });
   } catch (error) {
     logger.error(`[${handler}] [user.js] error ---> ${error}`);
     return res.status(500).json({
@@ -437,11 +516,107 @@ const dashboard = async (req, res) => {
     });
   }
 };
+const itemsList = async (req, res) => {
+  const handler = "itemsList";
+  try {
+    const serviceId = req.params?.serviceId?.trim() || "";
+    const userId = req.userId?.userId || req.params?.userId;
+    logger.info(
+      `[${file}] [${handler}] [HANDLER_CALLED] | serviceId= ${serviceId}`
+    );
+    if (!serviceId || !userId) {
+      logger.warn(
+        ` [${file}] [${handler}] [ARGUMENT_MISSING] | serviceId= ${serviceId}, userId= ${userId}`
+      );
+      return res.status(400).json({
+        status: false,
+        msg: "Argument missing",
+      });
+    }
+    if (
+      !mongoose.Types.ObjectId.isValid(serviceId) ||
+      !mongoose.Types.ObjectId.isValid(userId)
+    ) {
+      logger.warn(
+        ` [${file}] [${handler}] [INVALID_INPUT_TYPE] | serviceId= ${serviceId}, userId= ${userId}`
+      );
+      return res.status(400).json({
+        status: false,
+        msg: "Invalid input argumrnt",
+      });
+    }
+    const userInfo = await user.findById(userId);
+    if (!userInfo) {
+      logger.warn(
+        ` [${file}] [${handler}] [No_USER_FOUND] | userId= ${userId}`
+      );
+      return res.status(400).json({
+        status: false,
+        msg: "No user found for this userId",
+      });
+    }
+    const itemsList = await serviceItem
+      .find({ serviceId: serviceId })
+      .populate("serviceId", "service");
+    if (!itemsList.length === 0) {
+      logger.info(
+        ` [${file}] [${handler}] [NO_ITEMS_FOUND] | serviceId= ${serviceId}, itemsList= null`
+      );
+      return res.status(400).json({
+        status: false,
+        msg: "No items for this service",
+      });
+    }
+    logger.info(
+      ` [${file}] [${handler}] [ITEMS_FETCHED] | serviceId= ${serviceId}`
+    );
+    const itemInCart = await cart.findOne({
+      userId: userId,
+      "items.service": serviceId,
+    });
+    if (itemInCart) {
+      let matchedItem = [];
+      for (const info of itemInCart.items) {
+        if (info.serviceId.toString() === serviceId) {
+          matchedItem.push(info.itemId);
+        }
+      }
+      logger.info(
+        `[${file}] [${handler}] [CART_ITEM_FETCH] | serviceId=${serviceId} , cartItems= ${itemInCart?.items?.length}`
+      );
+      return res.status(200).json({
+        status: true,
+        msg: "Data fetch Seccessfully",
+        items: itemsList,
+        cartItem: matchedItem,
+      });
+    } else {
+      logger.info(
+        `[${file}] [${handler}] [NO_CART_ITEMS] | serviceId= ${serviceId} , cartItems= ${itemInCart?.items?.length}`
+      );
+      return res.status(200).json({
+        status: true,
+        msg: "Data fetch seccessfully but no item in the cart for this serviceId",
+        items: itemsList,
+        cartItem: false,
+      });
+    }
+  } catch (error) {
+    logger.info(
+      `[${file}] ${handler} [Internal server error] | error=${error}`
+    );
+    return res.status(500).json({
+      status: false,
+      msg: "Internal server error",
+    });
+  }
+};
+
 const cartInfo = async (req, res) => {
   const handler = "cartInfo";
   try {
     logger.info(` [user.js] [${handler}] handler called `);
-    const userId = req.user?.userId || req.body?.userId;
+    const userId = req.user?.userId;
     if (!userId) {
       logger.warn("argument missing inside token");
       return res.status(400).json({
@@ -751,4 +926,5 @@ export default {
   orderInfo,
   cancelOrder,
   listTotalOrders,
+  itemsList,
 };

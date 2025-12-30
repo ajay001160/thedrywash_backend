@@ -13,7 +13,6 @@ const userRole = async (req, res, next) => {
         msg: "Unauthorized: No user information found",
       });
     }
-    console.log(req.token)
     req.user=req.token;
     next();
   } catch (error) {

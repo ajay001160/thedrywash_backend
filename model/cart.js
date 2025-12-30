@@ -1,5 +1,4 @@
-import mongoose, { mongo } from "mongoose";
-
+import mongoose from "mongoose";
 
 const cartSchema = mongoose.Schema(
   {
@@ -20,20 +19,24 @@ const cartSchema = mongoose.Schema(
         quantity: {
           type: String,
           require: true,
-        }
-      }
+        },
+        price: {
+          type: String,
+          require: true,
+        },
+      },
     ],
-    totalPrice:{
-      type:String,
-      trim:true
+    totalPrice: {
+      type: String,
+      trim: true,
     },
-    status:{
-      type:String,
-      enum:["0","1","2"],
-      default:"0"
-    }
+    status: {
+      type: String,
+      enum: ["0", "1", "2"],
+      default: "0",
+    },
   },
- 
+
   { timestamps: true }
 );
-export default mongoose.model("cart",cartSchema);
+export default mongoose.model("cart", cartSchema);
