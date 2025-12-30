@@ -261,14 +261,19 @@ const addToCart = async (req, res) => {
         msg: "Invalid argument format",
       });
     }
-    quantity = parseInt(quantity);
-    if (quantity === 0 || quantity < -1 || Number.isNaN(quantity) || quantity > 1) {
+    quantity = Number(quantity); // if any req containing alphabet will NaN;
+
+    if (
+      Number.isNaN(quantity) ||
+      !Number.isInteger(quantity) ||
+      (quantity !== -1 && quantity !== 1)
+    ) {
       logger.warn(
-        `[${file}][${handler}] [INVALID_QUANTITY] | quantity =${quantity}`
+        `[${file}][${handler}][INVALID_QUANTITY] | quantity=${quantity}`
       );
       return res.status(400).json({
         status: false,
-        msg: "Quantity must be a positive number or -1 allow at a time",
+        msg: "Quantity must be either -1 or 1",
       });
     }
 
@@ -297,9 +302,9 @@ const addToCart = async (req, res) => {
         // Update quantity
         let newQuantity = parseInt(matchedItem.quantity) + quantity;
         let itemTotalPrice =
-          parseInt(matchedItem.price) +(
-          parseInt(quantity) * parseInt(itemInfo.price));
-          console.log(itemTotalPrice);
+          parseInt(matchedItem.price) +
+          parseInt(quantity) * parseInt(itemInfo.price);
+        console.log(itemTotalPrice);
         let totalPrice =
           parseInt(userCart.totalPrice) +
           parseInt(quantity) * parseInt(itemInfo.price);
@@ -385,19 +390,19 @@ const addToCart = async (req, res) => {
           },
           { new: true }
         );
-      
-      logger.info(
-        `[${file}][${handler}] [CART_UPDATED_SUCCESSFULLY] | newQuantity = ${quantity}, UpdatedTotalPrice = ${totalPrc}`
-      );
-      return res.status(200).json({
-        status: true,
-        newQuantity: quantity,
-        itemTotalPrice: itemInfo.price,
-        noOfItemInCart: newCart.items.length,
-        cartTotalPrice: newCart.totalPrice,
-        msg: "Cart Updated Successfully",
-      });
-    }
+
+        logger.info(
+          `[${file}][${handler}] [CART_UPDATED_SUCCESSFULLY] | newQuantity = ${quantity}, UpdatedTotalPrice = ${totalPrc}`
+        );
+        return res.status(200).json({
+          status: true,
+          newQuantity: quantity,
+          itemTotalPrice: itemInfo.price,
+          noOfItemInCart: newCart.items.length,
+          cartTotalPrice: newCart.totalPrice,
+          msg: "Cart Updated Successfully",
+        });
+      }
     } else {
       if (quantity <= 0) {
         //item not exist in cart but user use quantaty -1
